@@ -5,6 +5,7 @@
 const fs = require("fs");
 const path = require("path");
 const adminPanel = require("../adminPanel");
+const weatherSystem = require("../weather");
 
 // Path pentru fișierele de date jucători (pentru /stats)
 const DATA_ROOT = path.join(process.cwd(), "server_data");
@@ -417,6 +418,92 @@ mp.events.add("server:command", (player, rawCommandString) => {
         try {
           player.call("chat:push", [
             "Eroare la încărcarea statisticilor.",
+            "#ff0000",
+          ]);
+        } catch (_) {}
+      }
+
+      return;
+    }
+
+    // Handler pentru /sett [hour] [minute] - set client time
+    if (cmd === "sett") {
+      try {
+        console.log(`[ChatCmd] ${player.name}: /sett ${args.join(" ")}`);
+
+        // Parse arguments
+        const hour = args[0];
+        const minute = args[1];
+
+        // Dacă lipsesc, folosește default (12:00) și trimite mesaj de usage
+        if (hour === undefined || minute === undefined) {
+          const result = weatherSystem.setClientTime(player, 12, 0);
+          const timeStr = `${String(result.h).padStart(2, "0")}:${String(result.m).padStart(2, "0")}`;
+          player.call("chat:push", [
+            `[Time] Set: ${timeStr} (default - usage: /sett [hour] [minute])`,
+            "#9fd3ff",
+          ]);
+        } else {
+          const result = weatherSystem.setClientTime(player, hour, minute);
+          const timeStr = `${String(result.h).padStart(2, "0")}:${String(result.m).padStart(2, "0")}`;
+          player.call("chat:push", [`[Time] Set: ${timeStr}`, "#9fd3ff"]);
+        }
+      } catch (e) {
+        console.log(
+          `[Chat] ERROR in /sett command for ${player.name}:`,
+          e.message
+        );
+        console.log(`[Chat] Error stack:`, e.stack);
+        try {
+          player.call("chat:push", [
+            "[Time] Error setting time",
+            "#ff0000",
+          ]);
+        } catch (_) {}
+      }
+
+      return;
+    }
+
+    // Handler pentru /setw [weather] - set client weather
+    if (cmd === "setw") {
+      try {
+        console.log(`[ChatCmd] ${player.name}: /setw ${args.join(" ")}`);
+
+        // Parse argument
+        const weatherInput = args[0];
+
+        // Dacă lipsește, trimite mesaj de usage
+        if (weatherInput === undefined) {
+          player.call("chat:push", [
+            "[Weather] Usage: /setw [weather_name|weather_id]",
+            "#ff0000",
+          ]);
+          return;
+        }
+
+        const result = weatherSystem.setClientWeather(player, weatherInput);
+        
+        if (result.valid) {
+          player.call("chat:push", [
+            `[Weather] Set: ${result.name}`,
+            "#9fd3ff",
+          ]);
+        } else {
+          player.call("chat:push", [
+            `[Weather] Invalid weather: ${weatherInput}`,
+            "#ff0000",
+          ]);
+        }
+      } catch (e) {
+        console.log(
+          `[Chat] ERROR in /setw command for ${player.name}:`,
+          e.message
+        );
+        console.log(`[Chat] Error stack:`, e.stack);
+        try {
+          player.call("chat:push", [
+            "[Weather] Error setting weather",
             "#ff0000",
           ]);
         } catch (_) {}

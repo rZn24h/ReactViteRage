@@ -33,6 +33,8 @@ function buildPayload() {
       "/loc",
       "/myweather",
       "/togsnow",
+      "/sett",
+      "/setw",
       "/stats",
       "/me",
       "/server",

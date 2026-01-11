@@ -119,6 +119,14 @@ try {
   console.log("[Client] [AdminPanel] Failed to load:", e.message);
 }
 
+try {
+  // Weather/Time system - per-player weather and time controls
+  require("./systems/weather");
+  console.log("[Client] [Weather] Module loaded");
+} catch (e) {
+  console.log("[Client] [Weather] Failed to load:", e.message);
+}
+
 // Notă: Dacă ai alte module (ex: auth), adaugă-le aici
 // try {
 //   require('./systems/auth');
