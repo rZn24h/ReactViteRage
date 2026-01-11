@@ -6,6 +6,7 @@ const fs = require("fs");
 const path = require("path");
 const adminPanel = require("../adminPanel");
 const weatherSystem = require("../weather");
+const vehicleUtils = require("../../commands/vehicle_utils");
 
 // Path pentru fișierele de date jucători (pentru /stats)
 const DATA_ROOT = path.join(process.cwd(), "server_data");
@@ -351,6 +352,54 @@ mp.events.add("server:command", (player, rawCommandString) => {
         }
       }
 
+      return;
+    }
+
+    // Handler pentru /fix - repară vehiculul curent
+    if (cmd === "fix") {
+      try {
+        console.log(`[ChatCmd] ${player.name}: /fix`);
+        vehicleUtils.fixVehicle(player);
+      } catch (e) {
+        console.log(`[Chat] ERROR in /fix command for ${player.name}:`, e.message);
+        console.log(`[Chat] Error stack:`, e.stack);
+      }
+      return;
+    }
+
+    // Handler pentru /dv - șterge vehiculul curent sau cel mai apropiat
+    if (cmd === "dv") {
+      try {
+        console.log(`[ChatCmd] ${player.name}: /dv`);
+        vehicleUtils.deleteVehicle(player);
+      } catch (e) {
+        console.log(`[Chat] ERROR in /dv command for ${player.name}:`, e.message);
+        console.log(`[Chat] Error stack:`, e.stack);
+      }
+      return;
+    }
+
+    // Handler pentru /flip - întoarce mașina pe roți
+    if (cmd === "flip") {
+      try {
+        console.log(`[ChatCmd] ${player.name}: /flip`);
+        vehicleUtils.flipVehicle(player);
+      } catch (e) {
+        console.log(`[Chat] ERROR in /flip command for ${player.name}:`, e.message);
+        console.log(`[Chat] Error stack:`, e.stack);
+      }
+      return;
+    }
+
+    // Handler pentru /color [primary] [secondary] - schimbă culoarea mașinii
+    if (cmd === "color") {
+      try {
+        console.log(`[ChatCmd] ${player.name}: /color ${args.join(" ")}`);
+        vehicleUtils.setVehicleColor(player, args[0], args[1]);
+      } catch (e) {
+        console.log(`[Chat] ERROR in /color command for ${player.name}:`, e.message);
+        console.log(`[Chat] Error stack:`, e.stack);
+      }
       return;
     }
 

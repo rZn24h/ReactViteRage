@@ -39,6 +39,14 @@ try {
   console.log("[Server] [Vehicle] Failed to load:", e.message);
 }
 
+// Vehicle utils commands - /fix, /dv, /flip, /color
+try {
+  require("./commands/vehicle_utils");
+  console.log("[Server] [VehicleUtils] Module loaded");
+} catch (e) {
+  console.log("[Server] [VehicleUtils] Failed to load:", e.message);
+}
+
 // Chat system - custom chat handler
 try {
   require("./systems/chat");

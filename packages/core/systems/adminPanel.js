@@ -28,6 +28,10 @@ function buildPayload() {
     uptime: process.uptime(),
     commands: [
       "/veh",
+      "/fix",
+      "/dv",
+      "/flip",
+      "/color",
       "/fly",
       "/tpwp",
       "/loc",
