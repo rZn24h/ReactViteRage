@@ -7,6 +7,7 @@ import React, { useState, useEffect } from "react";
 import FlyIndicator from "./components/FlyIndicator";
 import LocWindow from "./components/LocWindow";
 import Chat from "./systems/chat/Chat";
+import ServerStats from "./systems/dashboard/ServerStats";
 
 // Componenta principală a aplicației
 function App() {
@@ -108,6 +109,9 @@ function App() {
       <div style={{ pointerEvents: "auto" }}>
         <LocWindow open={locOpen} coords={coords} />
       </div>
+
+      {/* Server Stats Dashboard - modal centrat */}
+      <ServerStats />
     </div>
   );
 }

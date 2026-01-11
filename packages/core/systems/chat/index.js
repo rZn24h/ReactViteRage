@@ -4,6 +4,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const adminPanel = require("../adminPanel");
 
 // Path pentru fișierele de date jucători (pentru /stats)
 const DATA_ROOT = path.join(process.cwd(), "server_data");
@@ -416,6 +417,36 @@ mp.events.add("server:command", (player, rawCommandString) => {
         try {
           player.call("chat:push", [
             "Eroare la încărcarea statisticilor.",
+            "#ff0000",
+          ]);
+        } catch (_) {}
+      }
+
+      return;
+    }
+
+    // Handler pentru /server - deschide dashboard server stats
+    if (cmd === "server") {
+      try {
+        console.log(`[ChatCmd] ${player.name}: /server`);
+        
+        // Deschide dashboard-ul
+        adminPanel.openDashboard(player);
+        
+        // Feedback opțional către jucător
+        player.call("chat:push", [
+          "[AdminPanel] Dashboard opened.",
+          "#9fd3ff",
+        ]);
+      } catch (e) {
+        console.log(
+          `[Chat] ERROR in /server command for ${player.name}:`,
+          e.message
+        );
+        console.log(`[Chat] Error stack:`, e.stack);
+        try {
+          player.call("chat:push", [
+            "[AdminPanel] Error opening dashboard",
             "#ff0000",
           ]);
         } catch (_) {}

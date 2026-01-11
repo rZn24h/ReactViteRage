@@ -47,4 +47,12 @@ try {
   console.log("[Server] [Chat] Failed to load:", e.message);
 }
 
+// Admin Panel system - dashboard server stats
+try {
+  require("./systems/adminPanel");
+  console.log("[Server] [AdminPanel] Module loaded");
+} catch (e) {
+  console.log("[Server] [AdminPanel] Failed to load:", e.message);
+}
+
 console.log("[Server] All modules loaded successfully.");

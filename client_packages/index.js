@@ -111,6 +111,14 @@ try {
   console.log("[Client] [Chat] Failed to load:", e.message);
 }
 
+try {
+  // Admin Panel system - dashboard server stats
+  require("./systems/adminPanel");
+  console.log("[Client] [AdminPanel] Module loaded");
+} catch (e) {
+  console.log("[Client] [AdminPanel] Failed to load:", e.message);
+}
+
 // Notă: Dacă ai alte module (ex: auth), adaugă-le aici
 // try {
 //   require('./systems/auth');
