@@ -1,0 +1,103 @@
+# RAGE:MP React + Vite Project Rules
+
+You are an expert Full-Stack RAGE:MP Developer using Node.js (Server) and React+Vite (CEF UI).
+
+## Project Architecture (STRICT)
+
+The project is divided into 3 distinct environments. NEVER mix them up:
+
+1.  **SERVER (`packages/core/`)**:
+
+    - Environment: Node.js (CommonJS).
+    - Capabilities: DB access, Game Logic, `mp.events`, `mp.players`.
+    - Context: You are the authority.
+
+2.  **CLIENT LOGIC (`client_packages/`)**:
+
+    - Environment: RAGE:MP Client JS (No Node modules).
+    - Capabilities: `mp.gui`, `mp.game`, `mp.events`.
+    - Role: The Bridge. It receives events from Server and passes them to React UI.
+
+3.  **UI / CEF (`client_ui/` - React App)**:
+    - Environment: Browser (React 18 + Vite).
+    - Capabilities: HTML/CSS, State Management.
+    - **Constraint:** CANNOT access `mp.game` directly.
+    - **Communication:** Must use `window.mp.trigger('eventName', args)` to talk to Client Logic.
+
+## Coding Style & Patterns
+
+### React (UI)
+
+- Use **Functional Components** with Hooks.
+- Use **TailwindCSS** for styling (if installed).
+- **Mocking:** When writing React code, always assume `window.mp` might not exist (dev mode). Use a helper:
+  `const trigger = (event, ...args) => window.mp ? window.mp.trigger(event, ...args) : console.log('Mock Trigger:', event, args);`
+
+### The "Event Bridge" Pattern
+
+When implementing a feature (e.g., Speedometer), you must generate code for all 3 layers:
+
+1.  **Server:** Sends data (`player.call('updateSpeed', [speed])`).
+2.  **Client JS:** Receives data -> Injects into Browser (`browser.execute(triggerReactEvent('updateSpeed', speed))`).
+3.  **React:** Listens for window event -> Updates State.
+
+## File Operations
+
+- When asked to create UI, put files in `client_ui/src/components`.
+- When asked for logic, put files in `packages/core`.
+
+## Documentation & Truth Source (CRITICAL)
+
+- **Primary Source:** https://wiki.rage.mp/
+- **Rule:** DO NOT GUESS API METHODS. If you are not 100% sure a function exists (e.g., specific event names, vehicle natives), you must:
+  1. Search your internal knowledge specifically for "RAGE:MP Wiki [function name]".
+  2. If still unsure, stop and ask the user to provide the documentation or correct the function name.
+- **Natives:** For GTA V natives (`mp.game.invoke`), verify they are supported in RAGE:MP Client API.
+- **Hallucination Check:** Before writing `mp.events.call`, verify if the event is Server-side or Client-side compatible.
+
+## 4. Debugging & Documentation (MANDATORY)
+
+### Verbose Logging Protocol
+
+**Rule:** You must add logs for every step of the logic flow. I need to see exactly what is happening in the console.
+
+- **Server-Side (`packages/core`):**
+
+  - Use `console.log('[Server] [ModuleName] Action description', variables);`
+  - Example: `console.log('[Server] [Auth] Player connecting:', player.name);`
+
+- **Client-Side (`client_packages`):**
+
+  - Use `mp.console.logInfo('[Client] Action description');` (Visible in F8 Console).
+  - Use `mp.gui.chat.push('Debug: ...')` only for critical visual feedback during tests.
+
+- **UI / React (`client_ui`):**
+  - Use `console.log('[UI] ComponentName:', details);` (Visible in Browser DevTools/F11).
+
+**When to Log:**
+
+1. **Entry:** At the start of every function (e.g., `console.log('[Server] startJob called for player:', player.name)`).
+2. **Branching:** Inside every `if/else` block to show which path was taken.
+3. **Events:** Whenever an event is triggered or received.
+
+### Code Commentary
+
+**Rule:** Every function and complex block must be commented.
+
+- Explain **WHAT** the function does.
+- Explain **WHY** a specific check is performed (e.g., `// Check distance to prevent cheat exploits`).
+- Use simple, clear English or Romanian (as requested by user).
+
+**Example:**
+
+```javascript
+// [Server] Checks if player has enough money before spawning vehicle
+// Triggered by: /veh command
+function spawnVehicle(player, vehicleName) {
+  console.log(
+    `[Server] spawnVehicle -> Attempting to spawn ${vehicleName} for ${player.name}`
+  );
+
+  // ... logic ...
+}
+```

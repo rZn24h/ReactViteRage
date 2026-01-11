@@ -1,0 +1,25 @@
+/* [UI] Tailwind CSS directives */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* [UI] Custom styles pentru RAGE:MP UI */
+:root {
+  font-family: system-ui, -apple-system, sans-serif;
+  color-scheme: dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: transparent; /* Transparent pentru overlay în joc */
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: transparent;
+}
+
+/* Pointer events - permite click pe UI dar trece prin fundal transparent */
+* {
+  box-sizing: border-box;
+}
