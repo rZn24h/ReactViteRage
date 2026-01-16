@@ -127,6 +127,14 @@ try {
   console.log("[Client] [Weather] Failed to load:", e.message);
 }
 
+try {
+  // Hacker system - NetRunner / Hacker pentru ATM
+  require("./systems/hacker");
+  console.log("[Client] [Hacker] Module loaded");
+} catch (e) {
+  console.log("[Client] [Hacker] Failed to load:", e.message);
+}
+
 // Notă: Dacă ai alte module (ex: auth), adaugă-le aici
 // try {
 //   require('./systems/auth');

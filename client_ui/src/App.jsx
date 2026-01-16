@@ -8,6 +8,7 @@ import FlyIndicator from "./components/FlyIndicator";
 import LocWindow from "./components/LocWindow";
 import Chat from "./systems/chat/Chat";
 import ServerStats from "./systems/dashboard/ServerStats";
+import HackerTerminal from "./systems/hacker/HackerTerminal";
 
 // Componenta principală a aplicației
 function App() {
@@ -112,6 +113,9 @@ function App() {
 
       {/* Server Stats Dashboard - modal centrat */}
       <ServerStats />
+
+      {/* Hacker Terminal - minigame pentru hacking ATM (V2 Design) */}
+      <HackerTerminal />
     </div>
   );
 }

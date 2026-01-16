@@ -63,4 +63,14 @@ try {
   console.log("[Server] [AdminPanel] Failed to load:", e.message);
 }
 
+// Hacker system - NetRunner / Hacker pentru ATM (SAFE init pattern)
+try {
+  const hackerModule = require("./systems/hacker");
+  // Apelează init() - funcția are guard intern pentru mp
+  hackerModule.init();
+  console.log("[Server] [Hacker] Module loaded");
+} catch (e) {
+  console.log("[Server] [Hacker] Failed to load:", e.message);
+}
+
 console.log("[Server] All modules loaded successfully.");

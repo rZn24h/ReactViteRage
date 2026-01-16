@@ -23,3 +23,51 @@ body {
 * {
   box-sizing: border-box;
 }
+
+/* [UI] Hacker Terminal Styles - Cyberpunk Design */
+/* CRT Scanline Effect */
+.scanlines {
+  background: linear-gradient(
+    to bottom,
+    rgba(255,255,255,0),
+    rgba(255,255,255,0) 50%,
+    rgba(0,0,0,0.2) 50%,
+    rgba(0,0,0,0.2)
+  );
+  background-size: 100% 4px;
+  position: fixed;
+  pointer-events: none;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+}
+
+/* Glow Animations */
+@keyframes neon-pulse {
+  0%, 100% { box-shadow: 0 0 10px #009e48, inset 0 0 5px #009e48; }
+  50% { box-shadow: 0 0 20px #009e48, inset 0 0 10px #009e48; }
+}
+
+@keyframes flow {
+  from { stroke-dashoffset: 24; }
+  to { stroke-dashoffset: 0; }
+}
+
+.wire-flow {
+  stroke-dasharray: 4 2;
+  animation: flow 0.5s linear infinite;
+}
+
+.glitch-text {
+  position: relative;
+}
+
+.glass-panel {
+  background: rgba(10, 20, 15, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+}
