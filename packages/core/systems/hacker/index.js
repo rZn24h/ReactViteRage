@@ -73,6 +73,7 @@ function init() {
         const reward = Math.floor(Math.random() * 401) + 300; // 300-700
         player.data.money += reward;
         chat(player, `!{#00FF00}[SUCCESS]!{#FFFFFF} Sistem spart! Ai primit $${reward}.`);
+        chat(player, `!{#FFAA00}[ALERT]!{#FFFFFF} Alarm triggered! Change clothes within 2 minutes!`);
         console.log(`[Hacker] SUCCESS ${player.name} +$${reward} money=${player.data.money}`);
       } else {
         chat(player, "!{#FF0000}[FAIL]!{#FFFFFF} Alarma a pornit! Poliția a fost alertată.");
@@ -81,6 +82,24 @@ function init() {
       }
     } catch (e) {
       console.log(`[Hacker] result error for ${player.name}:`, e);
+    }
+  });
+
+  // Client -> Server: safe (jucătorul a scăpat)
+  mp.events.add("server:hacker:safe", (player) => {
+    try {
+      console.log(`[Hacker] ${player.name} escaped successfully from getaway`);
+      
+      ensureData(player);
+      
+      // Bonus mic de RP sau money pentru evadare reușită
+      const bonus = 50;
+      player.data.money += bonus;
+      
+      chat(player, `!{#00FF00}[ESCAPED]!{#FFFFFF} Police lost your trail! Bonus: +$${bonus}.`);
+      console.log(`[Hacker] SAFE ${player.name} +$${bonus} money=${player.data.money}`);
+    } catch (e) {
+      console.log(`[Hacker] safe error for ${player.name}:`, e);
     }
   });
 

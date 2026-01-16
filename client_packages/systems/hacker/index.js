@@ -1,144 +1,68 @@
-// [Client] Hacker System - NetRunner / Hacker pentru ATM
+// [Client] Hacker System - NetRunner / Hacker pentru ATM cu Getaway
 // Environment: RAGE:MP Client JS (NU Node.js)
-// Funcționalitate: E lângă ATM -> start hack -> freeze player -> UI minigame -> reward/fail
+// Funcționalitate: E lângă ATM -> prompt -> game -> animație -> getaway
 
 let isHacking = false;
-let radarWasVisible = true; // Stare originală a radar-ului
+let radarWasVisible = true;
+let animDictLoaded = false;
+let getawayTimer = null;
+let getawayBlips = [];
+let getawayColshapes = [];
+let isInGetaway = false;
 
-// Coordonate ATM-uri pe hartă (GTA V)
-// Vector3(x, y, z) pentru fiecare locație ATM
+// Coordonate ATM-uri și magazine de haine pentru getaway
 const hackSpots = [
-  // Paleto Bay - nord
   new mp.Vector3(-104.38, 6477.58, 31.62),
-  
-  // Los Santos - centru/downtown
   new mp.Vector3(147.65, -1035.75, 29.34),
-  new mp.Vector3(33.17, -1347.81, 29.50),
-  new mp.Vector3(-254.42, -692.49, 33.62),
-  new mp.Vector3(-1315.71, -834.69, 16.96),
-  new mp.Vector3(-1112.25, 2708.52, 18.55),
-  
-  // Maze Bank Tower
-  new mp.Vector3(-301.66, -829.75, 32.42),
-  new mp.Vector3(-350.80, -49.56, 49.04),
-  
-  // Vinewood
-  new mp.Vector3(228.18, 338.40, 105.56),
-  new mp.Vector3(158.77, 234.22, 106.63),
-  
-  // Grove Street / South LS
-  new mp.Vector3(285.68, 143.37, 104.17),
-  new mp.Vector3(-57.17, -92.96, 57.88),
-  
-  // Pillbox Hill
-  new mp.Vector3(-867.13, -187.99, 37.84),
-  new mp.Vector3(-821.63, -1081.91, 11.13),
-  
-  // Rockford Hills
-  new mp.Vector3(-717.61, -915.64, 19.22),
-  new mp.Vector3(-526.65, -1222.98, 18.45),
-  
-  // Vespucci Beach
-  new mp.Vector3(-1305.35, -706.41, 25.35),
-  new mp.Vector3(-2072.41, -317.27, 13.32),
-  
-  // La Mesa / Industrial
-  new mp.Vector3(1175.74, 2706.80, 38.09),
-  new mp.Vector3(1077.70, -776.46, 58.24),
-  
-  // Sandy Shores
-  new mp.Vector3(1968.13, 3743.73, 32.34),
-  new mp.Vector3(1701.21, 4933.59, 42.06),
-  new mp.Vector3(1822.61, 3683.03, 34.28),
-  
-  // Grapeseed
-  new mp.Vector3(1686.75, 4815.74, 42.01),
-  
-  // Grand Senora Desert
-  new mp.Vector3(-95.55, 6457.19, 31.47),
-  new mp.Vector3(2682.94, 3286.52, 55.24),
-  
-  // Airport
-  new mp.Vector3(-866.65, -238.74, 40.00),
-  new mp.Vector3(214.01, -808.44, 30.73),
-  
-  // Legion Square
-  new mp.Vector3(145.38, -1035.20, 29.37),
-  
-  // Mirror Park
-  new mp.Vector3(129.21, -1291.06, 29.23),
-  
-  // Little Seoul
-  new mp.Vector3(-720.60, -415.66, 34.98),
-  
-  // Mission Row
-  new mp.Vector3(255.85, -225.70, 54.08),
 ];
 
-// Blips pentru ATM-uri pe hartă
+// Coordonate magazine de haine (GTA V) - 3 locații pentru getaway
+const clothingStores = [
+  new mp.Vector3(72.25, -1399.10, 29.38),  // Downtown LS
+  new mp.Vector3(-708.71, -152.13, 37.42),  // Rockford Hills
+  new mp.Vector3(-3172.50, 1048.13, 20.86), // Paleto Bay
+];
+
 let atmBlips = [];
 
-/**
- * Creează blips pentru toate ATM-urile pe hartă
- */
 function createATMBlips() {
   try {
-    // Șterge blips existente dacă există (cleanup)
     atmBlips.forEach(blip => {
-      try { 
-        blip.destroy(); 
-      } catch (e) {
-        mp.console.logInfo(`[Hacker] Error destroying old blip: ${e}`);
-      }
+      try { blip.destroy(); } catch (_) {}
     });
     atmBlips = [];
-
-    // Creează blip pentru fiecare ATM
     hackSpots.forEach((spot, index) => {
       try {
-        // Sprite 277 = Dollar Sign (potrivit pentru ATM)
-        // Alternativ: 500 = Location marker generic
         const blip = mp.blips.new(277, spot, {
           name: `ATM #${index + 1}`,
-          color: 2, // Verde (green)
-          shortRange: false, // Apare pe hartă întotdeauna
+          color: 2,
+          shortRange: false,
           scale: 0.8,
           dimension: mp.players.local ? mp.players.local.dimension : 0
         });
         atmBlips.push(blip);
-        mp.console.logInfo(`[Hacker] Created ATM blip #${index + 1} at ${spot.x.toFixed(2)}, ${spot.y.toFixed(2)}, ${spot.z.toFixed(2)}`);
       } catch (e) {
         mp.console.logInfo(`[Hacker] Error creating blip #${index + 1}: ${e}`);
       }
     });
-
-    mp.console.logInfo(`[Hacker] Created ${atmBlips.length} ATM blips on map`);
+    mp.console.logInfo(`[Hacker] Created ${atmBlips.length} ATM blips`);
   } catch (e) {
     mp.console.logInfo(`[Hacker] Error creating ATM blips: ${e}`);
   }
 }
 
-/**
- * Trimite CustomEvent către UI (React) prin browser.execute
- * @param {string} eventName - Numele event-ului (ex: 'hacker:start')
- * @param {any} detail - Payload-ul event-ului
- */
 function uiDispatch(eventName, detail) {
   try {
-    // Verifică dacă uiBrowser există (încercă mai multe variante)
     let uiBrowser = null;
     if (typeof global !== "undefined" && global.uiBrowser) {
       uiBrowser = global.uiBrowser;
     } else if (typeof window !== "undefined" && window.uiBrowser) {
       uiBrowser = window.uiBrowser;
     }
-    
     if (!uiBrowser) {
       mp.console.logInfo(`[Hacker] uiDispatch: uiBrowser not available for ${eventName}`);
-      mp.gui.chat.push(`[Hacker] Error: UI Browser not available`);
       return;
     }
-    
     const payload = JSON.stringify(detail ?? {});
     const script = `
       (function() {
@@ -150,20 +74,13 @@ function uiDispatch(eventName, detail) {
         }
       })();
     `;
-    
     uiBrowser.execute(script);
-    mp.console.logInfo(`[Hacker] uiDispatch: ${eventName} sent to UI with payload: ${payload}`);
+    mp.console.logInfo(`[Hacker] uiDispatch: ${eventName} sent`);
   } catch (e) {
-    mp.console.logInfo(`[Hacker] uiDispatch error for ${eventName}: ${e}`);
-    mp.gui.chat.push(`[Hacker] Error dispatching ${eventName}: ${e}`);
+    mp.console.logInfo(`[Hacker] uiDispatch error: ${e}`);
   }
 }
 
-/**
- * Verifică dacă jucătorul e lângă un spot de hack
- * @param {number} maxDist - Distanța maximă (default 1.5)
- * @returns {boolean}
- */
 function nearSpot(maxDist = 1.5) {
   const p = mp.players.local.position;
   for (const s of hackSpots) {
@@ -173,187 +90,419 @@ function nearSpot(maxDist = 1.5) {
   return false;
 }
 
-// E key (0x45) lângă ATM -> cere start de la server
-mp.keys.bind(0x45, true, () => {
-  if (isHacking) {
-    mp.console.logInfo("[Hacker] Already hacking, ignoring E key");
-    return;
-  }
-  if (mp.gui.cursor.visible) {
-    mp.console.logInfo("[Hacker] Cursor visible, ignoring E key");
-    return;
-  }
-
-  if (nearSpot(1.5)) {
-    mp.console.logInfo("[Hacker] E pressed near ATM, requesting start from server");
-    mp.events.callRemote("server:hacker:requestStart");
-  }
-});
-
-// Funcție helper pentru a restaura radar-ul
 function restoreRadar() {
   try {
     mp.game.ui.displayRadar(radarWasVisible);
-    mp.console.logInfo(`[Hacker] Radar restored to ${radarWasVisible ? 'visible' : 'hidden'}`);
   } catch (e) {
-    mp.console.logInfo(`[Hacker] Error restoring radar: ${e}`);
-    // Fallback: încearcă să arate radar-ul oricum
-    try {
-      mp.game.ui.displayRadar(true);
-      mp.console.logInfo("[Hacker] Radar force-shown as fallback");
-    } catch (e2) {
-      mp.console.logInfo(`[Hacker] Error force-showing radar: ${e2}`);
+    try { mp.game.ui.displayRadar(true); } catch (_) {}
+  }
+}
+
+// Preload animație
+let animationCheckInterval = null;
+
+function loadGrabCashAnimation() {
+  if (animDictLoaded) return;
+  try {
+    // Curăță interval-ul anterior dacă există
+    if (animationCheckInterval) {
+      clearInterval(animationCheckInterval);
+      animationCheckInterval = null;
+    }
+    
+    mp.game.streaming.requestAnimDict("anim@heists@ornate_bank@grab_cash");
+    
+    // Verifică periodic dacă animația s-a încărcat
+    animationCheckInterval = setInterval(() => {
+      try {
+        if (mp.game.streaming.hasAnimDictLoaded("anim@heists@ornate_bank@grab_cash")) {
+          animDictLoaded = true;
+          if (animationCheckInterval) {
+            clearInterval(animationCheckInterval);
+            animationCheckInterval = null;
+          }
+          mp.console.logInfo("[Hacker] Animation dictionary loaded");
+        }
+      } catch (e) {
+        mp.console.logInfo(`[Hacker] Error checking animation load: ${e}`);
+        // Curăță la eroare
+        if (animationCheckInterval) {
+          clearInterval(animationCheckInterval);
+          animationCheckInterval = null;
+        }
+      }
+    }, 100);
+    
+    // Timeout: curăță după 10 secunde dacă nu s-a încărcat
+    setTimeout(() => {
+      if (animationCheckInterval) {
+        clearInterval(animationCheckInterval);
+        animationCheckInterval = null;
+        if (!animDictLoaded) {
+          mp.console.logInfo("[Hacker] Animation loading timeout after 10s");
+        }
+      }
+    }, 10000);
+  } catch (e) {
+    mp.console.logInfo(`[Hacker] Error loading animation: ${e}`);
+    // Curăță la eroare
+    if (animationCheckInterval) {
+      clearInterval(animationCheckInterval);
+      animationCheckInterval = null;
     }
   }
 }
 
-// Server -> Client: start hack
-mp.events.add("client:hacker:start", () => {
-  if (isHacking) {
-    mp.console.logInfo("[Hacker] Already hacking, ignoring start event");
+// Animație grab cash când hack-ul reușește
+function playGrabCashAnimation(callback) {
+  if (!animDictLoaded) {
+    mp.console.logInfo("[Hacker] Animation not loaded, skipping");
+    // Unfreeze în caz că animația nu e încărcată
+    try {
+      mp.players.local.freezePosition(false);
+      mp.console.logInfo("[Hacker] Player unfrozen (animation not loaded)");
+    } catch (e) {}
+    if (callback) callback();
     return;
   }
   
-  mp.console.logInfo("[Hacker] Starting hack session");
-  mp.gui.chat.push("[Hacker] Starting hack session...");
-  isHacking = true;
-
-  // Salvează starea radar-ului înainte să-l ascundem
   try {
-    // Notă: RAGE:MP nu are API direct pentru a verifica starea radar-ului
-    // Presupunem că este vizibil în mod normal
-    radarWasVisible = true;
+    const player = mp.players.local;
+    mp.console.logInfo("[Hacker] Playing grab cash animation");
+    
+    // Freeze player pentru animație
+    try {
+      player.freezePosition(true);
+      mp.console.logInfo("[Hacker] Player frozen for animation");
+    } catch (e) {
+      mp.console.logInfo(`[Hacker] Error freezing for animation: ${e}`);
+    }
+    
+    // Task play animation folosind API-ul RAGE:MP
+    // Wiki: https://wiki.rage.mp/index.php?title=Player::taskPlayAnim
+    // taskPlayAnim(dict, name, speed, speedMultiplier, duration, flag, playbackRate, lockX, lockY, lockZ)
+    try {
+      player.taskPlayAnim(
+        "anim@heists@ornate_bank@grab_cash", // dict
+        "grab",                              // name
+        2.0,                                 // speed (2x speed = animație mai rapidă)
+        -2.0,                                // speedMultiplier
+        3000,                                // duration (3 secunde în ms)
+        1,                                   // flag (0 = normal, 1 = loop)
+        0.0,                                 // playbackRate
+        false,                               // lockX
+        false,                               // lockY
+        false                                // lockZ
+      );
+      mp.console.logInfo("[Hacker] Animation task started");
+    } catch (e) {
+      mp.console.logInfo(`[Hacker] Error starting animation task: ${e}`);
+    }
+    
+    // După 3 secunde, unfreeze și callback
+    setTimeout(() => {
+      try {
+        // Stop animația
+        try {
+          player.clearTasks();
+          mp.console.logInfo("[Hacker] Animation stopped");
+        } catch (e) {
+          mp.console.logInfo(`[Hacker] Error stopping animation: ${e}`);
+        }
+        
+        // Unfreeze player
+        player.freezePosition(false);
+        mp.console.logInfo("[Hacker] Grab cash animation finished - player unfrozen");
+      } catch (e) {
+        mp.console.logInfo(`[Hacker] Error unfreezing after animation: ${e}`);
+        // Fallback: încearcă din nou
+        try {
+          mp.players.local.freezePosition(false);
+        } catch (e2) {
+          mp.console.logInfo(`[Hacker] Fallback unfreeze also failed: ${e2}`);
+        }
+      }
+      if (callback) callback();
+    }, 3000); // 3 secunde (3000ms) - maxim 5 secunde cerut
   } catch (e) {
-    radarWasVisible = true; // Fallback
+    mp.console.logInfo(`[Hacker] Error playing animation: ${e}`);
+    // În caz de eroare, asigură-te că player-ul e unfrozen
+    try {
+      mp.players.local.freezePosition(false);
+      mp.console.logInfo("[Hacker] Player unfrozen (error fallback)");
+    } catch (e2) {}
+    if (callback) callback();
   }
+}
 
-  // Arată cursor și ascunde radar
-  mp.gui.cursor.show(true, true);
-  try { 
-    mp.game.ui.displayRadar(false); 
-    mp.console.logInfo("[Hacker] Radar hidden");
+// Cleanup getaway
+function cleanupGetaway() {
+  if (getawayTimer) {
+    clearInterval(getawayTimer);
+    getawayTimer = null;
+  }
+  getawayBlips.forEach(blip => {
+    try { blip.destroy(); } catch (_) {}
+  });
+  getawayBlips = [];
+  getawayColshapes.forEach(col => {
+    try { col.destroy(); } catch (_) {}
+  });
+  getawayColshapes = [];
+  isInGetaway = false;
+  
+  try {
+    mp.game.gameplay.setFakeWantedLevel(0);
+    mp.console.logInfo("[Hacker] Fake wanted level reset");
   } catch (e) {
-    mp.console.logInfo(`[Hacker] Error hiding radar: ${e}`);
+    mp.console.logInfo(`[Hacker] Error resetting wanted level: ${e}`);
+  }
+}
+
+// Start getaway system
+function startGetaway() {
+  if (isInGetaway) {
+    mp.console.logInfo("[Hacker] Getaway already active");
+    return;
   }
   
-  // Freeze player
-  try { 
-    mp.players.local.freezePosition(true); 
-    mp.console.logInfo("[Hacker] Player frozen");
+  mp.console.logInfo("[Hacker] Starting getaway sequence");
+  isInGetaway = true;
+  
+  // Mesaj alertă
+  mp.gui.chat.push("!{#FF0000}[ALARM]!{#FFFFFF} Change clothes at a store within 2 minutes!");
+  
+  // Fake wanted level
+  try {
+    mp.game.gameplay.setFakeWantedLevel(2);
+    mp.console.logInfo("[Hacker] Fake wanted level set to 2");
   } catch (e) {
-    mp.console.logInfo(`[Hacker] Error freezing player: ${e}`);
+    mp.console.logInfo(`[Hacker] Error setting wanted level: ${e}`);
   }
-
-  // Delay mic pentru a se asigura că totul e pregătit înainte de UI
-  setTimeout(() => {
-    // Trimite event către UI
-    mp.console.logInfo("[Hacker] Dispatching hacker:start to UI...");
-    uiDispatch("hacker:start", {});
+  
+  // Creează blips pentru magazine
+  clothingStores.forEach((store, index) => {
+    try {
+      const blip = mp.blips.new(73, store, {
+        name: `Clothing Store #${index + 1}`,
+        color: 1, // Red
+        shortRange: false,
+        scale: 1.0,
+        dimension: mp.players.local ? mp.players.local.dimension : 0
+      });
+      getawayBlips.push(blip);
+      
+      // Creează colshape pentru magazin (radius 3.0m)
+      const colshape = mp.colshapes.newSphere(store.x, store.y, store.z, 3.0);
+      colshape.storeIndex = index;
+      getawayColshapes.push(colshape);
+      
+      mp.console.logInfo(`[Hacker] Created getaway blip and colshape #${index + 1}`);
+    } catch (e) {
+      mp.console.logInfo(`[Hacker] Error creating getaway blip/colshape #${index + 1}: ${e}`);
+    }
+  });
+  
+  // Timer 2 minute (120 secunde)
+  let timeLeft = 120;
+  getawayTimer = setInterval(() => {
+    timeLeft--;
     
-    // Test: verifică dacă event-ul a ajuns (pentru debugging)
-    setTimeout(() => {
-      if (isHacking) {
-        mp.console.logInfo("[Hacker] Hack session active - UI should be visible");
+    if (timeLeft <= 0) {
+      // Fail - timpul a expirat
+      clearInterval(getawayTimer);
+      getawayTimer = null;
+      mp.gui.chat.push("!{#FF0000}[FAILED]!{#FFFFFF} Police located you. Wanted level active.");
+      mp.console.logInfo("[Hacker] Getaway timer expired - player failed");
+      
+      // Șterge blips dar păstrează wanted level
+      getawayBlips.forEach(blip => {
+        try { blip.destroy(); } catch (_) {}
+      });
+      getawayBlips = [];
+      getawayColshapes.forEach(col => {
+        try { col.destroy(); } catch (_) {}
+      });
+      getawayColshapes = [];
+      isInGetaway = false;
+    } else if (timeLeft <= 30) {
+      // Warning când mai sunt 30 secunde
+      if (timeLeft === 30) {
+        mp.gui.chat.push(`!{#FFAA00}[WARNING]!{#FFFFFF} Only 30 seconds left!`);
       }
-    }, 500);
+    }
+  }, 1000);
+  
+  mp.console.logInfo("[Hacker] Getaway timer started (120 seconds)");
+}
+
+// Verifică colshapes pentru magazine
+mp.events.add("playerEnterColshape", (colshape) => {
+  if (!isInGetaway || getawayColshapes.indexOf(colshape) === -1) return;
+  
+  mp.console.logInfo("[Hacker] Player entered clothing store colshape - getaway success");
+  
+  // Success - a ajuns la magazin în timp
+  cleanupGetaway();
+  mp.gui.chat.push("!{#00FF00}[SUCCESS]!{#FFFFFF} Changed clothes. Police lost your trail.");
+  
+  // Trimite event la server
+  mp.events.callRemote("server:hacker:safe");
+});
+
+mp.keys.bind(0x45, true, () => {
+  if (isHacking || isInGetaway) return;
+  if (mp.gui.cursor.visible) return;
+  if (nearSpot(1.5)) {
+    mp.console.logInfo("[Hacker] E pressed near ATM");
+    mp.events.callRemote("server:hacker:requestStart");
+  }
+});
+
+// Server -> Client: start hack (arată prompt)
+mp.events.add("client:hacker:start", () => {
+  if (isHacking) {
+    mp.console.logInfo("[Hacker] Already hacking, ignoring");
+    return;
+  }
+  mp.console.logInfo("[Hacker] Hack request - showing prompt");
+  mp.gui.cursor.show(true, true);
+  radarWasVisible = true;
+  setTimeout(() => {
+    uiDispatch("hacker:start", {});
   }, 100);
 });
 
-// Funcție helper pentru a închide sesiunea de hacking (cleanup complet)
-function endHackSession(success) {
-  if (!isHacking) return; // Dacă nu e activ, nu face nimic
+// UI -> Client: confirm hack (începe jocul)
+mp.events.add("hacker:confirm", () => {
+  if (isHacking) return;
+  mp.console.logInfo("[Hacker] Hack confirmed - starting game");
+  isHacking = true;
   
-  mp.console.logInfo(`[Hacker] Ending hack session (success: ${success})`);
-  isHacking = false;
+  try {
+    mp.game.ui.displayRadar(false);
+  } catch (e) {}
+  
+  try {
+    mp.players.local.freezePosition(true);
+  } catch (e) {}
+  
+  uiDispatch("hacker:gameStart", {});
+});
 
-  // Ascunde cursor
+// UI -> Client: cancel hack
+mp.events.add("hacker:cancel", () => {
+  mp.console.logInfo("[Hacker] Hack cancelled");
+  mp.gui.cursor.show(false, false);
+  uiDispatch("hacker:hide", {});
+});
+
+function endHackSession(success, skipUnfreeze = false) {
+  if (!isHacking) return;
+  isHacking = false;
+  
   try {
     mp.gui.cursor.show(false, false);
-    mp.console.logInfo("[Hacker] Cursor hidden");
-  } catch (e) {
-    mp.console.logInfo(`[Hacker] Error hiding cursor: ${e}`);
-  }
+  } catch (e) {}
   
-  // Restaurează radar-ul
   restoreRadar();
   
-  // Unfreeze player
-  try { 
-    mp.players.local.freezePosition(false); 
-    mp.console.logInfo("[Hacker] Player unfrozen");
-  } catch (e) {
-    mp.console.logInfo(`[Hacker] Error unfreezing player: ${e}`);
+  // Nu unfreeze dacă urmează animația (success case)
+  // Animația va face unfreeze singură
+  if (!skipUnfreeze) {
+    try {
+      mp.players.local.freezePosition(false);
+      mp.console.logInfo("[Hacker] Player unfrozen (endHackSession)");
+    } catch (e) {
+      mp.console.logInfo(`[Hacker] Error unfreezing player: ${e}`);
+    }
   }
-
-  // Trimite hide event către UI
+  
   uiDispatch("hacker:hide", {});
 }
 
-// UI -> Client: finish hack (prin mp.trigger)
+// UI -> Client: finish hack
 mp.events.add("hacker:finish", (raw) => {
   mp.console.logInfo(`[Hacker] hacker:finish received: ${raw}`);
   
   let data = { success: false };
-  try { 
-    data = JSON.parse(String(raw)); 
-    mp.console.logInfo(`[Hacker] Parsed finish data:`, data);
+  try {
+    data = JSON.parse(String(raw));
   } catch (e) {
     mp.console.logInfo(`[Hacker] Error parsing finish data: ${e}`);
   }
-
-  // Închide sesiunea
-  endHackSession(data.success);
   
-  // Trimite rezultat către server
-  mp.events.callRemote("server:hacker:result", !!data.success);
-  mp.console.logInfo(`[Hacker] Sent result to server: ${!!data.success}`);
-});
-
-// Disable controls while hacking
-mp.events.add("render", () => {
-  if (!isHacking) return;
-  try { 
-    mp.game.controls.disableAllControlActions(0); 
-  } catch (e) {
-    // Silent fail
+  const success = !!data.success;
+  
+  // Trimite rezultat la server
+  mp.events.callRemote("server:hacker:result", success);
+  
+  // Dacă success, redă animația și declanșează getaway
+  // IMPORTANT: Nu închide sesiunea imediat (skipUnfreeze=true) pentru că animația freeze din nou
+  if (success) {
+    mp.console.logInfo("[Hacker] Hack successful - playing animation and starting getaway");
+    
+    // Închide sesiunea fără unfreeze (animația va face freeze și apoi unfreeze singură)
+    endHackSession(success, true); // skipUnfreeze = true
+    
+    // Redă animația (freeze + unfreeze)
+    playGrabCashAnimation(() => {
+      // După animație, start getaway
+      startGetaway();
+      // Double-check: asigură-te că player-ul e unfrozen
+      try {
+        mp.players.local.freezePosition(false);
+        mp.console.logInfo("[Hacker] Final unfreeze check after animation");
+      } catch (e) {
+        mp.console.logInfo(`[Hacker] Error in final unfreeze check: ${e}`);
+      }
+    });
+  } else {
+    // Fail case - închide sesiunea normal (cu unfreeze)
+    endHackSession(success, false); // skipUnfreeze = false
   }
 });
 
-// Creează blips când player e ready
+mp.events.add("render", () => {
+  if (!isHacking) return;
+  try {
+    mp.game.controls.disableAllControlActions(0);
+  } catch (e) {}
+});
+
 mp.events.add("playerReady", () => {
-  mp.console.logInfo("[Hacker] playerReady - creating ATM blips");
+  mp.console.logInfo("[Hacker] playerReady");
   
-  // Restaurează radar-ul la conectare (în caz că a rămas ascuns)
   try {
     mp.game.ui.displayRadar(true);
     radarWasVisible = true;
-    mp.console.logInfo("[Hacker] Radar ensured visible on playerReady");
-  } catch (e) {
-    mp.console.logInfo(`[Hacker] Error ensuring radar visible: ${e}`);
-  }
+  } catch (e) {}
   
-  // Delay mic pentru a se asigura că totul e inițializat
+  // Preload animație
+  loadGrabCashAnimation();
+  
   setTimeout(() => {
     createATMBlips();
   }, 1000);
 });
 
-// Cleanup când player se deconectează (opțional, dar good practice)
 mp.events.add("playerQuit", () => {
   try {
-    // Restaurează radar-ul înainte de quit
-    if (isHacking) {
-      endHackSession(false);
+    if (isHacking) endHackSession(false);
+    cleanupGetaway();
+    
+    // Curăță interval-ul de animație
+    if (animationCheckInterval) {
+      clearInterval(animationCheckInterval);
+      animationCheckInterval = null;
     }
     
-    // Cleanup blips
     atmBlips.forEach(blip => {
       try { blip.destroy(); } catch (_) {}
     });
     atmBlips = [];
-    mp.console.logInfo("[Hacker] Cleaned up ATM blips on quit");
   } catch (e) {
-    mp.console.logInfo(`[Hacker] Error cleaning up on quit: ${e}`);
+    mp.console.logInfo(`[Hacker] Error on quit: ${e}`);
   }
 });
 

@@ -8,9 +8,12 @@ import { GRID_SIZE, TIME_LIMIT_SECONDS } from './constants';
 import { generateLevel, traceCircuit, checkWinCondition } from './utils/gameLogic';
 import CircuitNode from './components/CircuitNode';
 import Header from './components/Header';
+import HackerPrompt from './components/HackerPrompt';
+
+type HackerViewState = 'HIDDEN' | 'PROMPT' | 'GAME';
 
 const HackerTerminal: React.FC = () => {
-  const [open, setOpen] = useState(false);
+  const [viewState, setViewState] = useState<HackerViewState>('HIDDEN');
   const [grid, setGrid] = useState<GridState>([]);
   const [status, setStatus] = useState<GameStatus>('IDLE');
   const [timeLeft, setTimeLeft] = useState(TIME_LIMIT_SECONDS);
@@ -36,11 +39,44 @@ const HackerTerminal: React.FC = () => {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
-    setOpen(false);
+    setViewState('HIDDEN');
     setStatus('IDLE');
     setGrid([]);
     setTimeLeft(TIME_LIMIT_SECONDS);
   }, []);
+
+  // Handle prompt confirm - trece la GAME
+  const handleConfirm = useCallback(() => {
+    console.log("[UI] [HackerTerminal] Prompt confirmed, starting game...");
+    
+    // Trimite confirm către client
+    try {
+      if (window.mp && typeof window.mp.trigger === "function") {
+        window.mp.trigger("hacker:confirm");
+        console.log("[UI] [HackerTerminal] Sent hacker:confirm to client");
+      }
+    } catch (e) {
+      console.log("[UI] [HackerTerminal] Error sending confirm:", e);
+    }
+    
+    setViewState('GAME');
+    initGame();
+  }, [initGame]);
+
+  // Handle prompt cancel - închide UI
+  const handleCancel = useCallback(() => {
+    console.log("[UI] [HackerTerminal] Prompt cancelled");
+    // Trimite event către client că s-a anulat
+    try {
+      if (window.mp && typeof window.mp.trigger === "function") {
+        window.mp.trigger("hacker:cancel");
+        console.log("[UI] [HackerTerminal] Sent hacker:cancel to client");
+      }
+    } catch (e) {
+      console.log("[UI] [HackerTerminal] Error sending cancel:", e);
+    }
+    stopGame();
+  }, [stopGame]);
 
   // Finish game - trimite rezultat către client
   const finishGame = useCallback((success: boolean) => {
@@ -72,11 +108,8 @@ const HackerTerminal: React.FC = () => {
     
     const onStart = (event: Event) => {
       console.log("[UI] [HackerTerminal] hacker:start event received", event);
-      setOpen(true);
-      // Delay mic pentru a se asigura că state-ul e actualizat
-      setTimeout(() => {
-        initGame();
-      }, 50);
+      // Activează starea PROMPT (confirmare)
+      setViewState('PROMPT');
     };
     
     const onHide = (event: Event) => {
@@ -84,8 +117,18 @@ const HackerTerminal: React.FC = () => {
       stopGame();
     };
 
+    const onGameStart = (event: Event) => {
+      console.log("[UI] [HackerTerminal] hacker:gameStart event received", event);
+      // Event-ul vine când jocul efectiv trebuie să înceapă (după confirm)
+      if (viewState === 'PROMPT') {
+        setViewState('GAME');
+        initGame();
+      }
+    };
+
     window.addEventListener("hacker:start", onStart);
     window.addEventListener("hacker:hide", onHide);
+    window.addEventListener("hacker:gameStart", onGameStart);
     
     console.log("[UI] [HackerTerminal] Event listeners registered");
     
@@ -93,8 +136,9 @@ const HackerTerminal: React.FC = () => {
       console.log("[UI] [HackerTerminal] Cleaning up event listeners...");
       window.removeEventListener("hacker:start", onStart);
       window.removeEventListener("hacker:hide", onHide);
+      window.removeEventListener("hacker:gameStart", onGameStart);
     };
-  }, [initGame, stopGame]);
+  }, [initGame, stopGame, viewState]);
 
   // Timer Effect
   useEffect(() => {
@@ -143,10 +187,17 @@ const HackerTerminal: React.FC = () => {
     });
   };
 
-  if (!open || status === 'IDLE') {
+  // HIDDEN state - nimic pe ecran
+  if (viewState === 'HIDDEN') {
     return null;
   }
 
+  // PROMPT state - doar fereastra de confirmare
+  if (viewState === 'PROMPT') {
+    return <HackerPrompt onConfirm={handleConfirm} onCancel={handleCancel} />;
+  }
+
+  // GAME state - minigame-ul efectiv
   return (
     <div 
       className="fixed inset-0 z-[250] flex flex-col items-center justify-center p-4 relative text-white"
