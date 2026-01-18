@@ -73,4 +73,12 @@ try {
   console.log("[Server] [Hacker] Failed to load:", e.message);
 }
 
+// Auth system - Login/Register pentru jucători
+try {
+  require("./systems/auth");
+  console.log("[Server] [Auth] Module loaded");
+} catch (e) {
+  console.log("[Server] [Auth] Failed to load:", e.message);
+}
+
 console.log("[Server] All modules loaded successfully.");

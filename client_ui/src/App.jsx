@@ -9,11 +9,15 @@ import LocWindow from "./components/LocWindow";
 import Chat from "./systems/chat/Chat";
 import ServerStats from "./systems/dashboard/ServerStats";
 import HackerTerminal from "./systems/hacker/HackerTerminal";
+import Auth from "./components/auth/Auth";
 
 // Componenta principală a aplicației
 function App() {
   // Log pentru debugging în Browser DevTools (F11 în RAGE:MP)
   console.log("[UI] App component rendered.");
+
+  // State pentru autentificare
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // State pentru Fly Mode
   const [flyActive, setFlyActive] = useState(false);
@@ -85,6 +89,29 @@ function App() {
       window.removeEventListener("loc:update", handleLocUpdate);
     };
   }, []); // Empty dependency array = rulează doar o dată la mount
+
+  // Dacă jucătorul nu este autentificat, afișează componenta de autentificare
+  if (!isAuthenticated) {
+    return (
+      <div
+        style={{
+          width: "100vw",
+          height: "100vh",
+          position: "fixed",
+          top: 0,
+          left: 0,
+          pointerEvents: "auto", // Permite interacțiunea cu formularul
+          background: "transparent",
+          backgroundColor: "transparent",
+        }}
+      >
+        <Auth onAuthSuccess={() => {
+          console.log("[UI] [App] Authentication successful, hiding auth screen");
+          setIsAuthenticated(true);
+        }} />
+      </div>
+    );
+  }
 
   return (
     // Wrapper transparent pentru overlay în joc

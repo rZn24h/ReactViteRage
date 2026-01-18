@@ -8,7 +8,13 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        'bhood-green': '#009e48',
+        'bhood-light': '#00c458',
+        'glass-bg': 'rgba(10, 20, 15, 0.6)',
+      },
+    },
   },
   plugins: [],
 }

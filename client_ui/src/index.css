@@ -16,7 +16,13 @@ body {
   padding: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: transparent;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+html {
+  background: transparent !important;
+  background-color: transparent !important;
 }
 
 /* Pointer events - permite click pe UI dar trece prin fundal transparent */

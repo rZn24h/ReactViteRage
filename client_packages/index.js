@@ -135,12 +135,20 @@ try {
   console.log("[Client] [Hacker] Failed to load:", e.message);
 }
 
-// Notă: Dacă ai alte module (ex: auth), adaugă-le aici
-// try {
-//   require('./systems/auth');
-//   console.log('[Client] [Auth] Module loaded');
-// } catch (e) {
-//   console.log('[Client] [Auth] Failed to load:', e.message);
-// }
+try {
+  // Auth system - Login/Register pentru jucători
+  require("./systems/auth");
+  console.log("[Client] [Auth] Module loaded");
+} catch (e) {
+  console.log("[Client] [Auth] Failed to load:", e.message);
+}
+
+try {
+  // Auth freeze handler - gestionează freeze/unfreeze pentru autentificare
+  require("./systems/auth/freeze");
+  console.log("[Client] [Auth] [Freeze] Module loaded");
+} catch (e) {
+  console.log("[Client] [Auth] [Freeze] Failed to load:", e.message);
+}
 
 console.log("[Client] All client modules loaded.");
